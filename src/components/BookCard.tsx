@@ -1,73 +1,55 @@
-import { Book } from "@/types/book";
-import { Badge } from "@/components/ui/badge";
-import { Star, User, Calendar, BookOpen } from "lucide-react";
+import { Book } from '@/types/book';
+import { Card, CardContent } from '@/components/ui/card';
+import { motion } from 'framer-motion';
 
 interface BookCardProps {
   book: Book;
-  onClick?: () => void;
+  onClick: () => void;
 }
 
-const statusColors = {
-  available: "bg-success text-success-foreground",
-  borrowed: "bg-warning text-warning-foreground", 
-  reserved: "bg-accent text-accent-foreground"
+const logBookClick = async (book: Book) => {
+  try {
+    await fetch(`${import.meta.env.VITE_API_URL}/logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'VIEW_BOOK', details: `User viewed book: ${book.title}` }),
+    });
+  } catch (error) {
+    console.error('Failed to log book click:', error);
+  }
 };
 
-const statusLabels = {
-  available: "Available",
-  borrowed: "Borrowed",
-  reserved: "Reserved"
-};
+export function BookCard({ book, onClick }: BookCardProps) {
+  const handleClick = () => {
+    logBookClick(book);
+    onClick();
+  };
 
-export const BookCard = ({ book, onClick }: BookCardProps) => {
   return (
-    <div 
-      className="group bg-gradient-card rounded-2xl shadow-book hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden border border-border/50 hover:border-primary/20 hover:-translate-y-1"
-      onClick={onClick}
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ duration: 0.3 }}
+      onClick={handleClick}
+      className="cursor-pointer group"
     >
-      {/* Book Cover */}
-      <div className="relative aspect-[3/4] overflow-hidden rounded-t-2xl bg-muted">
-        <img 
-          src={book.coverImage} 
-          alt={book.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-        />
-        <div className="absolute top-3 right-3">
-          <Badge className={`${statusColors[book.status]} shadow-sm`}>
-            {statusLabels[book.status]}
-          </Badge>
-        </div>
-        
-        {/* Rating overlay */}
-        <div className="absolute bottom-3 left-3 bg-card/90 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center gap-1">
-          <Star className="h-3 w-3 fill-accent text-accent" />
-          <span className="text-xs font-medium">{book.rating}</span>
-        </div>
+      <Card className="overflow-hidden transition-all duration-300 ease-in-out border rounded-lg shadow-sm group-hover:shadow-xl group-hover:-translate-y-2">
+        <CardContent className="p-0">
+          <img
+            src={book.coverPath || './placeholder.svg'}
+            alt={book.title}
+            className="object-cover w-full h-auto rounded-t-lg aspect-[2/3]"
+          />
+        </CardContent>
+      </Card>
+      <div className="pt-3 px-1 w-full">
+        <h3 className="font-semibold truncate text-md group-hover:text-primary" title={book.title}>{book.title}</h3>
+        <p className="text-sm text-muted-foreground truncate">{book.author}</p>
       </div>
-
-      {/* Book Info */}
-      <div className="p-4 space-y-3">
-        <div>
-          <h3 className="font-semibold text-card-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight">
-            {book.title}
-          </h3>
-          <div className="flex items-center gap-1 mt-1 text-muted-foreground">
-            <User className="h-3 w-3" />
-            <p className="text-sm truncate">{book.author}</p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center gap-1">
-            <BookOpen className="h-3 w-3" />
-            <span>{book.genre}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            <span>{book.publishedYear}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    </motion.div>
   );
-};
+}

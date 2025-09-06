@@ -1,159 +1,70 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Lora:wght@400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Library Management System Design - macOS Tahoe inspired
-All colors MUST be HSL.
-*/
-
 @layer base {
   :root {
-    /* Background system */
-    --background: 240 20% 99%;
-    --background-secondary: 240 15% 96%;
-    --foreground: 240 15% 9%;
+    --background: 0 0% 98%; /* Almost white */
+    --foreground: 0 0% 13%; /* Dark gray for text */
 
-    /* Card system with soft rounded aesthetic */
     --card: 0 0% 100%;
-    --card-secondary: 240 10% 98%;
-    --card-foreground: 240 15% 12%;
-    --card-hover: 240 20% 97%;
+    --card-foreground: 0 0% 13%;
 
-    /* Popover system */
     --popover: 0 0% 100%;
-    --popover-foreground: 240 15% 12%;
+    --popover-foreground: 0 0% 13%;
 
-    /* Primary brand colors - book-inspired blue */
-    --primary: 217 91% 60%;
-    --primary-light: 217 91% 70%;
-    --primary-dark: 217 91% 50%;
+    --primary: 25 95% 53%; /* Orange */
     --primary-foreground: 0 0% 100%;
 
-    /* Secondary neutral system */
-    --secondary: 240 10% 95%;
-    --secondary-hover: 240 10% 90%;
-    --secondary-foreground: 240 15% 25%;
+    --secondary: 0 0% 96.1%;
+    --secondary-foreground: 0 0% 9%;
 
-    /* Muted system for less prominent elements */
-    --muted: 240 10% 92%;
-    --muted-foreground: 240 8% 55%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 63.9%;
 
-    /* Accent colors for highlights */
-    --accent: 45 100% 70%;
-    --accent-light: 45 100% 80%;
-    --accent-foreground: 240 15% 12%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
 
-    /* Status colors */
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    /* Border and input system */
-    --border: 240 15% 88%;
-    --border-light: 240 15% 92%;
-    --input: 240 15% 94%;
-    --input-border: 240 15% 85%;
-    --ring: 217 91% 60%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 25 95% 53%; /* Orange */
 
-    /* Rounded design system */
-    --radius: 1rem;
-    --radius-lg: 1.5rem;
-    --radius-xl: 2rem;
-
-    /* Gradients for depth */
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 60%), hsl(217 91% 70%));
-    --gradient-card: linear-gradient(135deg, hsl(0 0% 100%), hsl(240 20% 99%));
-    --gradient-background: linear-gradient(180deg, hsl(240 20% 99%), hsl(240 15% 96%));
-
-    /* Shadows for depth */
-    --shadow-sm: 0 2px 8px hsl(240 15% 15% / 0.08);
-    --shadow-md: 0 4px 16px hsl(240 15% 15% / 0.12);
-    --shadow-lg: 0 8px 32px hsl(240 15% 15% / 0.16);
-    --shadow-book: 0 4px 20px hsl(240 15% 15% / 0.15);
-
-    /* Transitions */
-    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --transition-fast: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
-
-    --sidebar-background: 0 0% 98%;
-
-    --sidebar-foreground: 240 5.3% 26.1%;
-
-    --sidebar-primary: 240 5.9% 10%;
-
-    --sidebar-primary-foreground: 0 0% 98%;
-
-    --sidebar-accent: 240 4.8% 95.9%;
-
-    --sidebar-accent-foreground: 240 5.9% 10%;
-
-    --sidebar-border: 220 13% 91%;
-
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --radius: 0.5rem;
   }
 
   .dark {
-    /* Dark mode - sophisticated book app aesthetic */
-    --background: 240 15% 8%;
-    --background-secondary: 240 15% 12%;
-    --foreground: 240 10% 95%;
+    --background: 0 0% 13%;
+    --foreground: 0 0% 98%;
 
-    --card: 240 15% 12%;
-    --card-secondary: 240 15% 15%;
-    --card-foreground: 240 10% 92%;
-    --card-hover: 240 15% 18%;
+    --card: 0 0% 18%;
+    --card-foreground: 0 0% 98%;
 
-    --popover: 240 15% 12%;
-    --popover-foreground: 240 10% 92%;
+    --popover: 0 0% 18%;
+    --popover-foreground: 0 0% 98%;
 
-    --primary: 217 91% 65%;
-    --primary-light: 217 91% 75%;
-    --primary-dark: 217 91% 55%;
-    --primary-foreground: 240 15% 8%;
+    --primary: 25 95% 53%; /* Orange */
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 15% 18%;
-    --secondary-hover: 240 15% 22%;
-    --secondary-foreground: 240 10% 85%;
+    --secondary: 0 0% 24%;
+    --secondary-foreground: 0 0% 98%;
 
-    --muted: 240 15% 15%;
-    --muted-foreground: 240 8% 65%;
+    --muted: 0 0% 24%;
+    --muted-foreground: 0 0% 63.9%;
 
-    --accent: 45 100% 75%;
-    --accent-light: 45 100% 85%;
-    --accent-foreground: 240 15% 8%;
+    --accent: 0 0% 24%;
+    --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 75% 55%;
-    --destructive-foreground: 240 10% 95%;
-    --success: 142 71% 50%;
-    --success-foreground: 240 10% 95%;
-    --warning: 38 92% 55%;
-    --warning-foreground: 240 10% 95%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 240 15% 22%;
-    --border-light: 240 15% 25%;
-    --input: 240 15% 18%;
-    --input-border: 240 15% 25%;
-    --ring: 217 91% 65%;
-
-    --gradient-primary: linear-gradient(135deg, hsl(217 91% 65%), hsl(217 91% 75%));
-    --gradient-card: linear-gradient(135deg, hsl(240 15% 12%), hsl(240 15% 15%));
-    --gradient-background: linear-gradient(180deg, hsl(240 15% 8%), hsl(240 15% 12%));
-
-    --shadow-sm: 0 2px 8px hsl(240 15% 5% / 0.3);
-    --shadow-md: 0 4px 16px hsl(240 15% 5% / 0.4);
-    --shadow-lg: 0 8px 32px hsl(240 15% 5% / 0.5);
-    --shadow-book: 0 4px 20px hsl(240 15% 5% / 0.45);
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --border: 0 0% 24%;
+    --input: 0 0% 24%;
+    --ring: 25 95% 53%; /* Orange */
   }
 }
 
@@ -161,33 +72,11 @@ All colors MUST be HSL.
   * {
     @apply border-border;
   }
-
   body {
-    @apply bg-gradient-to-br from-background to-background-secondary text-foreground;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
   }
-
-  /* Smooth scrolling for better UX */
-  html {
-    scroll-behavior: smooth;
-  }
-
-  /* Custom scrollbar styling */
-  ::-webkit-scrollbar {
-    width: 8px;
-  }
-  
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--muted));
-    border-radius: var(--radius);
-  }
-  
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: var(--radius);
-  }
-  
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--muted-foreground) / 0.5);
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Lora', serif;
   }
 }

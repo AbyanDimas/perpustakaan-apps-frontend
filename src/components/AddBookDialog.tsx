@@ -1,242 +1,244 @@
-import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import * as pdfjsLib from 'pdfjs-dist';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, BookPlus } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { Book } from "@/types/book";
-import { useToast } from "@/hooks/use-toast";
+
+// Setup pdfjs worker
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.mjs`;
+
+const formSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  author: z.string().min(1, "Author is required"),
+  description: z.string().min(1, "Description is required"),
+  genre: z.string().min(1, "Genre is required"),
+  status: z.enum(["TERSEDIA", "DIPINJAM"]),
+  pdf: z.instanceof(FileList).optional(),
+  coverImage: z.instanceof(FileList).optional(),
+});
 
 interface AddBookDialogProps {
-  onAddBook: (book: Omit<Book, 'id'>) => void;
+  children: React.ReactNode;
+  mode: 'add' | 'edit';
+  initialData?: Book;
+  onSubmit: (data: FormData) => void;
+  isPending: boolean;
+  progress: number;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
-const genres = [
-  "Fiction", "Non-Fiction", "Science Fiction", "Fantasy", "Mystery", 
-  "Romance", "Biography", "History", "Technology", "Self-Help"
-];
+export const AddBookDialog = ({ children, mode, initialData, onSubmit, isPending, progress, open: openProp, onOpenChange: onOpenChangeProp }: AddBookDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false);
+  const [isParsingPdf, setIsParsingPdf] = useState(false);
 
-export const AddBookDialog = ({ onAddBook }: AddBookDialogProps) => {
-  const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
-  
-  const [formData, setFormData] = useState({
-    title: "",
-    author: "",
-    genre: "",
-    coverImage: "",
-    description: "",
-    isbn: "",
-    publishedYear: new Date().getFullYear(),
-    pages: 0,
-    rating: 0,
-    language: "English"
+  const open = openProp !== undefined ? openProp : internalOpen;
+  const setOpen = onOpenChangeProp !== undefined ? onOpenChangeProp : setInternalOpen;
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      title: "",
+      author: "",
+      description: "",
+      genre: "",
+      status: "TERSEDIA",
+    },
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const newBook: Omit<Book, 'id'> = {
-        ...formData,
-        status: "available" as const,
-        addedDate: new Date().toISOString()
-      };
-
-      onAddBook(newBook);
-      
-      toast({
-        title: "Book added successfully!",
-        description: `"${formData.title}" has been added to your library.`,
+  useEffect(() => {
+    if (initialData) {
+      form.reset({
+        title: initialData.title || "",
+        author: initialData.author || "",
+        description: initialData.description || "",
+        genre: initialData.genre || "",
+        status: initialData.status || "TERSEDIA",
       });
-
-      // Reset form
-      setFormData({
-        title: "",
-        author: "",
-        genre: "",
-        coverImage: "",
-        description: "",
-        isbn: "",
-        publishedYear: new Date().getFullYear(),
-        pages: 0,
-        rating: 0,
-        language: "English"
-      });
-      
-      setOpen(false);
-    } catch (error) {
-      toast({
-        title: "Error adding book",
-        description: "Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+    } else {
+      form.reset(); // Clear form for 'add' mode
     }
+  }, [initialData, open, form]);
+
+  const pdfRef = form.register("pdf");
+  const coverImageRef = form.register("coverImage");
+
+  const handlePdfChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsParsingPdf(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+      const metadata = await pdf.getMetadata();
+      
+      const title = metadata.info?.Title || '';
+      const author = metadata.info?.Author || '';
+
+      if (title) form.setValue('title', title, { shouldValidate: true });
+      if (author) form.setValue('author', author, { shouldValidate: true });
+
+    } catch (error) {
+      console.error("Failed to parse PDF metadata:", error);
+    } finally {
+      setIsParsingPdf(false);
+    }
+  };
+
+  const handleFormSubmit = (values: z.infer<typeof formSchema>) => {
+    const formData = new FormData();
+    formData.append("title", values.title);
+    formData.append("author", values.author);
+    formData.append("description", values.description);
+    formData.append("genre", values.genre);
+    formData.append("status", values.status);
+    if (values.pdf && values.pdf.length > 0) {
+      formData.append("pdf", values.pdf[0]);
+    }
+    if (values.coverImage && values.coverImage.length > 0) {
+      formData.append("coverImage", values.coverImage[0]);
+    }
+    
+    onSubmit(formData);
   };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-gradient-primary hover:bg-primary-dark text-primary-foreground rounded-xl px-6 h-12 shadow-md hover:shadow-lg transition-all">
-          <Plus className="h-4 w-4 mr-2" />
-          Add New Book
-        </Button>
+        {children}
       </DialogTrigger>
-      
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl">
+      <DialogContent className="sm:max-w-4xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <BookPlus className="h-5 w-5 text-primary" />
-            Add New Book
-          </DialogTitle>
+          <DialogTitle>{mode === 'add' ? 'Add New Book' : 'Edit Book'}</DialogTitle>
         </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Title *</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={(e) => setFormData({...formData, title: e.target.value})}
-                required
-                className="rounded-xl border-input-border"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="author">Author *</Label>
-              <Input
-                id="author"
-                value={formData.author}
-                onChange={(e) => setFormData({...formData, author: e.target.value})}
-                required
-                className="rounded-xl border-input-border"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="genre">Genre</Label>
-              <Select value={formData.genre} onValueChange={(value) => setFormData({...formData, genre: value})}>
-                <SelectTrigger className="rounded-xl border-input-border">
-                  <SelectValue placeholder="Select genre" />
-                </SelectTrigger>
-                <SelectContent>
-                  {genres.map((genre) => (
-                    <SelectItem key={genre} value={genre}>{genre}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="isbn">ISBN</Label>
-              <Input
-                id="isbn"
-                value={formData.isbn}
-                onChange={(e) => setFormData({...formData, isbn: e.target.value})}
-                className="rounded-xl border-input-border"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="coverImage">Cover Image URL</Label>
-            <Input
-              id="coverImage"
-              type="url"
-              value={formData.coverImage}
-              onChange={(e) => setFormData({...formData, coverImage: e.target.value})}
-              placeholder="https://example.com/book-cover.jpg"
-              className="rounded-xl border-input-border"
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleFormSubmit)} className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="The Great Gatsby" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="publishedYear">Year</Label>
-              <Input
-                id="publishedYear"
-                type="number"
-                value={formData.publishedYear}
-                onChange={(e) => setFormData({...formData, publishedYear: parseInt(e.target.value)})}
-                className="rounded-xl border-input-border"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="pages">Pages</Label>
-              <Input
-                id="pages"
-                type="number"
-                value={formData.pages}
-                onChange={(e) => setFormData({...formData, pages: parseInt(e.target.value)})}
-                className="rounded-xl border-input-border"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="rating">Rating</Label>
-              <Input
-                id="rating"
-                type="number"
-                min="0"
-                max="5"
-                step="0.1"
-                value={formData.rating}
-                onChange={(e) => setFormData({...formData, rating: parseFloat(e.target.value)})}
-                className="rounded-xl border-input-border"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="language">Language</Label>
-              <Input
-                id="language"
-                value={formData.language}
-                onChange={(e) => setFormData({...formData, language: e.target.value})}
-                className="rounded-xl border-input-border"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              value={formData.description}
-              onChange={(e) => setFormData({...formData, description: e.target.value})}
-              rows={3}
-              className="rounded-xl border-input-border resize-none"
+            <FormField
+              control={form.control}
+              name="author"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Author</FormLabel>
+                  <FormControl>
+                    <Input placeholder="F. Scott Fitzgerald" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-          </div>
-
-          <div className="flex gap-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-xl h-12"
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isLoading || !formData.title || !formData.author}
-              className="flex-1 bg-gradient-primary hover:bg-primary-dark text-primary-foreground rounded-xl h-12"
-            >
-              {isLoading ? "Adding..." : "Add Book"}
-            </Button>
-          </div>
-        </form>
+            <div className="md:col-span-2">
+              <FormField
+                control={form.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="A novel about the American dream..." {...field} rows={5} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <FormField
+              control={form.control}
+              name="genre"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Genre</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Fiction" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="TERSEDIA">TERSEDIA</SelectItem>
+                      <SelectItem value="DIPINJAM">DIPINJAM</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <div className="md:col-span-2">
+              <FormField
+                control={form.control}
+                name="pdf"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Book PDF {isParsingPdf && "(Parsing...)"}</FormLabel>
+                    <FormControl>
+                      <Input type="file" accept=".pdf" {...pdfRef} onChange={handlePdfChange} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <FormField
+                control={form.control}
+                name="coverImage"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cover Image (Optional)</FormLabel>
+                    <FormControl>
+                      <Input type="file" accept="image/*" {...coverImageRef} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <DialogFooter className="md:col-span-2">
+              <Button type="submit" disabled={isPending || isParsingPdf}>
+                {isPending ? `Uploading... ${progress.toFixed(0)}%` : "Save Changes"}
+              </Button>
+            </DialogFooter>
+            {isPending && (
+              <div className="md:col-span-2">
+                <Progress value={progress} />
+              </div>
+            )}
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

@@ -83,8 +83,7 @@ export default {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
-        serif: ['Playfair Display', 'serif'],
-        display: ['Playfair Display', 'serif'],
+        serif: ['Lora', 'serif'],
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -92,6 +91,7 @@ export default {
         sm: "calc(var(--radius) - 4px)",
         xl: "var(--radius-lg)",
         "2xl": "var(--radius-xl)",
+        full: "9999px",
       },
       backgroundImage: {
         "gradient-primary": "var(--gradient-primary)",
