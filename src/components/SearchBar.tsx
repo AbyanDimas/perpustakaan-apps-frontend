@@ -45,10 +45,11 @@ export const SearchBar = ({ filters, onFiltersChange }: SearchBarProps) => {
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            id="search-input"
             placeholder="Search books, authors, or ISBN..."
             value={filters.search}
             onChange={(e) => onFiltersChange({ ...filters, search: e.target.value })}
-            className="pl-10 h-12 rounded-xl border-input-border bg-input focus:border-primary"
+            className="pl-10 h-12 rounded-xl border-input-border bg-input focus:border-primary transition-all duration-300 focus:shadow-lg"
           />
         </div>
 
