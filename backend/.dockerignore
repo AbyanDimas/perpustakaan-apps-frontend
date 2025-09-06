@@ -1,0 +1,16 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+
+# Build artifacts
+dist
+
+# Env files
+.env*
+*.env
+
+# Uploads folder
+uploads

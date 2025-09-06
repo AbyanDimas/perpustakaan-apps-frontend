@@ -1,0 +1,12 @@
+---
+- name: Deploy Frontend Application
+  hosts: frontend_servers
+  become: yes
+  roles:
+    - role: frontend
+
+- name: Deploy Backend Application
+  hosts: backend_servers
+  become: yes
+  roles:
+    - role: backend

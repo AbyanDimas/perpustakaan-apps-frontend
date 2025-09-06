@@ -1,0 +1,48 @@
+---
+# Tasks untuk mendeploy aplikasi backend
+
+- name: Install Docker
+  ansible.builtin.yum:
+    name: docker
+    state: present
+
+- name: Start and enable Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add remote user to docker group
+  ansible.builtin.user:
+    name: "{{ remote_user }}"
+    groups: docker
+    append: yes
+
+- name: Copy project source to the server
+  ansible.builtin.copy:
+    src: ../../../../backend/ # Hanya salin direktori backend
+    dest: /home/{{ remote_user }}/app/backend
+
+- name: Build backend Docker image from Dockerfile
+  community.docker.docker_image:
+    name: books-library-backend
+    build:
+      path: /home/{{ remote_user }}/app/backend
+      dockerfile: Dockerfile
+    source: build
+    state: present
+
+- name: Run backend container
+  community.docker.docker_container:
+    name: backend-app
+    image: books-library-backend
+    state: started
+    recreate: yes
+    pull: no
+    ports:
+      - "3000:3000"
+    env:
+      # Ambil variabel dari environment mesin kontrol atau teruskan via command line
+      # ansible-playbook playbook.yml --extra-vars "DATABASE_URL=..."
+      DATABASE_URL: "{{ lookup('env', 'DATABASE_URL') }}"
+      REDIS_URL: "{{ lookup('env', 'REDIS_URL') }}"

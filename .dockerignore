@@ -1,0 +1,21 @@
+# Git
+.git
+.gitignore
+
+# Dependencies
+node_modules
+
+# Build artifacts
+dist
+build
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Backend folder
+backend
+
+# Env files
+.env*
+*.env

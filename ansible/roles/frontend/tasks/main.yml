@@ -1,0 +1,43 @@
+---
+# Tasks untuk mendeploy aplikasi frontend
+
+- name: Install Docker
+  ansible.builtin.yum:
+    name: docker
+    state: present
+
+- name: Start and enable Docker service
+  ansible.builtin.service:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add remote user to docker group
+  ansible.builtin.user:
+    name: "{{ remote_user }}"
+    groups: docker
+    append: yes
+
+- name: Copy project source to the server
+  ansible.builtin.copy:
+    src: ../../../../ # Salin seluruh direktori proyek
+    dest: /home/{{ remote_user }}/app
+
+- name: Build frontend Docker image from Dockerfile
+  community.docker.docker_image:
+    name: books-library-frontend
+    build:
+      path: /home/{{ remote_user }}/app
+      dockerfile: Dockerfile
+    source: build
+    state: present
+
+- name: Run frontend container
+  community.docker.docker_container:
+    name: frontend-app
+    image: books-library-frontend
+    state: started
+    recreate: yes
+    pull: no
+    ports:
+      - "80:80"

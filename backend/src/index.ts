@@ -5,6 +5,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import dotenv from 'dotenv';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
@@ -45,6 +47,22 @@ app.use(async (req, res, next) => {
 
 app.use(cors());
 app.use(express.json());
+
+// Security Best Practices
+// Helmet untuk mengatur berbagai header HTTP keamanan
+app.use(helmet());
+
+// Rate limiting untuk mencegah penyalahgunaan API
+const limiter = rateLimit({
+	windowMs: 15 * 60 * 1000, // 15 menit
+	max: 100, // Batasi setiap IP hingga 100 permintaan per `window`
+	standardHeaders: true, // Kembalikan info rate limit di header `RateLimit-*`
+	legacyHeaders: false, // Nonaktifkan header `X-RateLimit-*`
+});
+
+// Terapkan middleware rate limiting hanya ke endpoint API
+app.use('/api', limiter);
+
 app.use('/uploads', express.static(uploadDir));
 
 const storage = multer.diskStorage({

@@ -1,73 +1,124 @@
-# Welcome to your Lovable project
+# Books Library Application
 
-## Project info
+Aplikasi perpustakaan buku modern yang dirancang untuk skalabilitas dan ketersediaan tinggi (High Availability).
 
-**URL**: https://lovable.dev/projects/be46b9ab-244c-4190-8e27-e1f23b4da698
+## Arsitektur Sistem
 
-## How can I edit this code?
+Arsitektur ini dirancang untuk menjadi tangguh, skalabel, dan mudah dikelola menggunakan prinsip Infrastructure as Code.
 
-There are several ways of editing your application.
+```
+Pengguna
+   |
+   v
+[AWS Application Load Balancer]  <-- (Menerima traffic dari internet, terminasi SSL)
+   |
+   +----------------------------------------+
+   |                                        |
+   v                                        v
+[Grup Auto-Scaling FE (6x EC2)]        [Grup Auto-Scaling BE (4x EC2)]
+ - Docker Container (Nginx + React)       - Docker Container (Node.js API)
+   |                                        |
+   |                                        v
+   +--------------------------------------->[AWS Application Load Balancer Internal]
+                                            |
+                                            +--------------------------+
+                                            |                          |
+                                            v                          v
+                                       [AWS ElastiCache - Redis]  [AWS RDS - Primary DB]
+                                       (Untuk Caching Bersama)     |
+                                                                   v
+                                                              [AWS RDS - Replica DB]
+                                                              (Untuk Failover & Read Replica)
+```
 
-**Use Lovable**
+### Komponen Utama:
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/be46b9ab-244c-4190-8e27-e1f23b4da698) and start prompting.
+- **Load Balancer**: Menggunakan AWS Application Load Balancer (ALB) untuk mendistribusikan traffic secara merata. Satu ALB publik untuk frontend, dan satu ALB internal untuk backend.
+- **Frontend (FE)**: Aplikasi React yang di-build sebagai file statis dan disajikan oleh Nginx. Dijalankan di dalam kontainer Docker pada 6 EC2 instance untuk redundansi.
+- **Backend (BE)**: API Node.js (Express/Fastify) yang berjalan di dalam kontainer Docker pada 4 EC2 instance. Berkomunikasi satu sama lain melalui cache bersama.
+- **Cache**: AWS ElastiCache (Redis) digunakan sebagai lapisan cache terdistribusi untuk mengurangi beban database dan mempercepat respons.
+- **Database**: AWS RDS (misalnya, PostgreSQL) dengan konfigurasi Multi-AZ (Primary & Replica) untuk memastikan High Availability dan menyediakan backup otomatis.
 
-Changes made via Lovable will be committed automatically to this repo.
+## Tumpukan Teknologi
 
-**Use your preferred IDE**
+- **Frontend**: React, TypeScript, Vite, TailwindCSS
+- **Backend**: Node.js, TypeScript, Express.js, Prisma ORM
+- **Database**: PostgreSQL (direkomendasikan)
+- **Containerization**: Docker
+- **Automation & IaC**: Ansible
+- **Cloud Provider**: AWS (EC2, ALB, RDS, ElastiCache)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Deployment
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+Proses deployment sepenuhnya otomatis menggunakan Ansible.
 
-Follow these steps:
+### Prasyarat
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1.  **AWS Account**: Konfigurasi kredensial AWS pada mesin yang akan menjalankan Ansible.
+2.  **Ansible**: Terinstal di mesin kontrol.
+3.  **Docker**: Terinstal di mesin kontrol (opsional, untuk build lokal).
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+### Langkah-langkah Deployment
 
-# Step 3: Install the necessary dependencies.
-npm i
+1.  **Konfigurasi Inventory Ansible**: Isi file `inventory` dengan alamat IP atau DNS dari EC2 instance yang telah dibuat.
+2.  **Jalankan Playbook**: Eksekusi playbook utama untuk mendeploy seluruh tumpukan.
+    ```bash
+    ansible-playbook playbook.yml
+    ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+Playbook akan melakukan tugas-tugas berikut:
+- Menginstal Docker di semua instance.
+- Membangun image Docker untuk frontend dan backend.
+- Menjalankan kontainer di grup server yang sesuai.
+- Mengkonfigurasi aplikasi untuk terhubung ke RDS dan ElastiCache.
+
+## Pengujian (Testing)
+
+Proyek backend dilengkapi dengan suite pengujian End-to-End (E2E) untuk memverifikasi fungsionalitas dan ketahanan API, termasuk simulasi beban untuk menguji `rate limiting`.
+
+### Prasyarat
+
+Sebelum menjalankan tes, instal semua dev dependencies dari dalam direktori `backend`:
+
+```bash
+cd backend
+npm install
+```
+
+### Menjalankan Tes
+
+Tes dirancang untuk dijalankan terhadap server yang sedang aktif. Ini bisa server lokal Anda atau server yang sudah di-deploy (staging).
+
+#### 1. Tes Lingkungan Lokal
+
+Anda perlu dua terminal di dalam direktori `backend`.
+
+**Di Terminal 1 (Jalankan Server):**
+
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+**Di Terminal 2 (Jalankan Tes):**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm test
+```
 
-**Use GitHub Codespaces**
+Tes akan secara otomatis menargetkan `http://localhost:3001`.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+#### 2. Tes Lingkungan Deploy (Staging)
 
-## What technologies are used for this project?
+Anda dapat menargetkan URL server mana pun dengan menggunakan environment variable `TEST_TARGET_URL`. Ini sangat berguna untuk menguji lingkungan `staging` sebelum deploy ke produksi.
 
-This project is built with:
+```bash
+# Ganti dengan URL staging Anda
+TEST_TARGET_URL=https://api.staging.domain-anda.com npm test
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+### Alur Kerja Pengujian yang Direkomendasikan
 
-## How can I deploy this project?
+Untuk menjaga stabilitas dan keamanan, sangat penting untuk memisahkan jenis pengujian berdasarkan lingkungannya:
 
-Simply open [Lovable](https://lovable.dev/projects/be46b9ab-244c-4190-8e27-e1f23b4da698) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+1.  **Lingkungan Staging**: Gunakan lingkungan ini untuk pengujian menyeluruh. Jalankan semua tes fungsional dan tes beban (simulasi *brute-force*) di sini untuk memastikan aplikasi kuat.
+2.  **Lingkungan Produksi**: **JANGAN** menjalankan tes beban di server produksi. Setelah deployment, cukup lakukan **Smoke Test** (tes ringan yang memeriksa apakah endpoint utama aktif) untuk memastikan deployment berhasil tanpa mengganggu pengguna.
