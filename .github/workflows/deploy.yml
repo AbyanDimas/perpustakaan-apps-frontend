@@ -1,0 +1,46 @@
+name: Deploy to Production
+
+# Workflow ini akan berjalan setiap kali ada push ke branch `main`
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy Application to EC2
+    runs-on: ubuntu-latest # Menggunakan runner Ubuntu terbaru dari GitHub
+
+    steps:
+    # Langkah 1: Mengunduh kode dari repository
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    # Langkah 2: Setup Python (diperlukan oleh Ansible)
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
+
+    # Langkah 3: Install Ansible
+    - name: Install Ansible
+      run: |
+        python -m pip install --upgrade pip
+        pip install ansible
+
+    # Langkah 4: Konfigurasi Kunci SSH dari GitHub Secrets
+    - name: Configure SSH Key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.ANSIBLE_SSH_PRIVATE_KEY }}" > ~/.ssh/lab.pem
+        chmod 600 ~/.ssh/lab.pem
+
+    # Langkah 5: Menjalankan Ansible Playbook
+    - name: Run Ansible Playbook
+      env:
+        # Teruskan kredensial AWS sebagai environment variable ke Ansible
+        AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      run: |
+        cd ansible
+        ansible-playbook playbook.yml

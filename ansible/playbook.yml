@@ -2,11 +2,13 @@
 - name: Deploy Frontend Application
   hosts: frontend_servers
   become: yes
+  remote_user: ubuntu
   roles:
     - role: frontend
 
 - name: Deploy Backend Application
   hosts: backend_servers
   become: yes
+  remote_user: ubuntu
   roles:
     - role: backend
