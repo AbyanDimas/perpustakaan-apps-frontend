@@ -32,7 +32,7 @@ COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/prisma ./prisma
 
 # Expose the port the app runs on (e.g., 3000)
-EXPOSE 3000
+EXPOSE 3001
 
 # First, push the schema to the database, then start the server.
 # This ensures the database is ready before the app starts.
