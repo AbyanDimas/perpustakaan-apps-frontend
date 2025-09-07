@@ -7,6 +7,7 @@ import fs from 'fs';
 import dotenv from 'dotenv';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
+import cache from 'memory-cache';
 
 dotenv.config();
 
@@ -14,6 +15,27 @@ const app = express();
 const prisma = new PrismaClient();
 const port = 3001;
 const API_BASE_URL = process.env.API_BASE_URL || `http://localhost:${port}`;
+
+// --- SSE Setup ---
+let clients: { id: number; res: express.Response }[] = [];
+
+const sendEventToClients = (data: any) => {
+  console.log('Sending event to all clients:', data);
+  clients.forEach(client => client.res.write(`data: ${JSON.stringify(data)}
+
+`));
+};
+
+const clearBooksCache = () => {
+  const keys = cache.keys();
+  keys.forEach(key => {
+    if (key.startsWith('/api/books')) {
+      cache.del(key);
+    }
+  });
+  console.log('Book cache cleared.');
+};
+// --- End SSE Setup ---
 
 const uploadDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadDir)) {
@@ -55,13 +77,30 @@ app.use(helmet());
 // Rate limiting untuk mencegah penyalahgunaan API
 const limiter = rateLimit({
 	windowMs: 15 * 60 * 1000, // 15 menit
-	max: 100, // Batasi setiap IP hingga 100 permintaan per `window`
+	max: 10000, // Batasi setiap IP hingga 100 permintaan per `window`
 	standardHeaders: true, // Kembalikan info rate limit di header `RateLimit-*`
 	legacyHeaders: false, // Nonaktifkan header `X-RateLimit-*`
 });
 
 // Terapkan middleware rate limiting hanya ke endpoint API
-app.use('/api', limiter);
+const bookUploadLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 menit
+  max: 50000, // Batasi setiap IP hingga 5 permintaan per `window`
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Terlalu banyak permintaan upload buku, coba lagi setelah 1 menit',
+});
+
+app.use('/api', (req, res, next) => {
+  // SSE endpoint should not be rate-limited in the same way
+  if (req.path === '/books/stream') {
+    return next();
+  }
+  if (req.path === '/books' && req.method === 'POST') {
+    return bookUploadLimiter(req, res, next);
+  }
+  limiter(req, res, next);
+});
 
 app.use('/uploads', express.static(uploadDir));
 
@@ -80,6 +119,30 @@ const getFullUrl = (filePath: string | null | undefined) => {
   if (!filePath) return null;
   return `${API_BASE_URL}/uploads/${path.basename(filePath)}`;
 };
+
+// --- SSE Endpoint ---
+app.get('/api/books/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.flushHeaders();
+
+  const clientId = Date.now();
+  const newClient = {
+    id: clientId,
+    res,
+  };
+  clients.push(newClient);
+  console.log(`Client ${clientId} connected to SSE stream.`);
+
+  // Send a welcome message to the client
+  res.write(`data: ${JSON.stringify({ type: 'connection', message: 'Connected to SSE' })}\n\n`);
+
+  req.on('close', () => {
+    clients = clients.filter(client => client.id !== clientId);
+    console.log(`Client ${clientId} disconnected.`);
+  });
+});
 
 app.get('/api/stats', async (req, res) => {
   try {
@@ -150,6 +213,14 @@ app.get('/api/languages', async (req, res) => {
 });
 
 app.get('/api/books', async (req, res) => {
+  const cacheKey = req.originalUrl;
+  const cachedData = cache.get(cacheKey);
+  if (cachedData) {
+    console.log(`[Cache] HIT: ${cacheKey}`);
+    return res.json(cachedData);
+  }
+  console.log(`[Cache] MISS: ${cacheKey}`);
+
   const { sort, order = 'asc', genre, status, search, limit } = req.query;
 
   try {
@@ -181,6 +252,8 @@ app.get('/api/books', async (req, res) => {
       pdfPath: getFullUrl(book.pdfPath),
       coverPath: getFullUrl(book.coverPath),
     }));
+
+    cache.put(cacheKey, booksWithFullPaths, 10 * 60 * 1000); // 10-minute cache
     res.json(booksWithFullPaths);
   } catch (error) {
     res.status(500).json({ error: 'Failed to fetch books' });
@@ -188,7 +261,7 @@ app.get('/api/books', async (req, res) => {
 });
 
 app.post('/api/books', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
-  const { title, author, description, genre, status } = req.body;
+  const { title, author, description, genre, status, language } = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   const pdfFile = files?.['pdf']?.[0];
   const coverImageFile = files?.['coverImage']?.[0];
@@ -209,6 +282,7 @@ app.post('/api/books', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'cov
         description,
         genre,
         status: status || 'TERSEDIA',
+        language: language || 'Unknown',
         pdfPath: pdfFile ? `uploads/${pdfFile.filename}` : null,
         coverPath: coverImageFile ? `uploads/${coverImageFile.filename}` : null,
       },
@@ -219,6 +293,10 @@ app.post('/api/books', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'cov
       pdfPath: getFullUrl(newBook.pdfPath),
       coverPath: getFullUrl(newBook.coverPath),
     };
+
+    sendEventToClients({ type: 'BOOK_ADDED', payload: bookWithFullPaths });
+    clearBooksCache();
+
     res.status(201).json(bookWithFullPaths);
   } catch (error) {
     console.error(error);
@@ -228,7 +306,7 @@ app.post('/api/books', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'cov
 
 app.put('/api/books/:id', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   const { id } = req.params;
-  const { title, author, description, genre, status } = req.body;
+  const { title, author, description, genre, status, language } = req.body;
   const files = req.files as { [fieldname: string]: Express.Multer.File[] };
   const pdfFile = files?.['pdf']?.[0];
   const coverImageFile = files?.['coverImage']?.[0];
@@ -243,7 +321,7 @@ app.put('/api/books/:id', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: '
       return res.status(404).json({ error: 'Book not found' });
     }
 
-    const dataToUpdate: any = { title, author, description, genre, status };
+    const dataToUpdate: any = { title, author, description, genre, status, language };
 
     if (pdfFile) {
       dataToUpdate.pdfPath = `uploads/${pdfFile.filename}`;
@@ -278,6 +356,9 @@ app.put('/api/books/:id', upload.fields([{ name: 'pdf', maxCount: 1 }, { name: '
       coverPath: getFullUrl(updatedBook.coverPath),
     };
 
+    sendEventToClients({ type: 'BOOK_UPDATED', payload: bookWithFullPaths });
+    clearBooksCache();
+
     res.json(bookWithFullPaths);
   } catch (error) {
     console.error(error);
@@ -305,6 +386,9 @@ app.delete('/api/books/:id', async (req, res) => {
 
     unlinkFile(book.pdfPath);
     unlinkFile(book.coverPath);
+
+    sendEventToClients({ type: 'BOOK_DELETED', payload: { id } });
+    clearBooksCache();
 
     res.status(204).send();
   } catch (error) {

@@ -34,7 +34,6 @@ COPY --from=builder /usr/src/app/prisma ./prisma
 # Expose the port the app runs on (e.g., 3000)
 EXPOSE 3000
 
-# Command to run the application
-# It's a good practice to run migrations before starting the app
-# This can be done in an entrypoint script
-CMD [ "node", "dist/index.js" ]
+# First, push the schema to the database, then start the server.
+# This ensures the database is ready before the app starts.
+CMD ["sh", "-c", "npx prisma db push && node dist/index.js"]
