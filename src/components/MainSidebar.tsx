@@ -55,7 +55,7 @@ export function MainSidebar() {
   const statuses = ['TERSEDIA', 'DIPINJAM'];
 
   return (
-    <aside className="w-72 flex flex-col border-r bg-zinc-50/95 dark:bg-zinc-900/95 text-foreground backdrop-blur-sm">
+    <aside className="hidden md:flex w-72 flex-col border-r bg-zinc-50/95 dark:bg-zinc-900/95 text-foreground backdrop-blur-sm">
       <div className="p-4 flex items-center gap-3 border-b border-zinc-200 dark:border-zinc-800">
         <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
           <Library className="h-6 w-6 text-white" />

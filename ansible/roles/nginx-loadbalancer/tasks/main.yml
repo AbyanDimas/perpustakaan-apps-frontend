@@ -1,0 +1,16 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Configure Nginx as Load Balancer
+  ansible.builtin.template:
+    src: nginx-lb.conf.j2
+    dest: /etc/nginx/sites-available/default
+
+- name: Restart Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted

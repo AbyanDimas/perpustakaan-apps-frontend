@@ -1,0 +1,4 @@
+---
+- src: https://github.com/mrlesmithjr/ansible-mariadb-galera-cluster
+  name: ansible-mariadb-galera-cluster
+  version: main # atau versi spesifik jika diperlukan

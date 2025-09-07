@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { Book } from '@/types/book';
 import { BookCard } from '@/components/BookCard';
 import { LoadingSkeleton } from '@/components/LoadingSkeleton';
@@ -8,44 +9,38 @@ import { SearchBar } from '@/components/SearchBar';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { MainSidebar } from '@/components/MainSidebar';
 import { Recommendations } from '@/components/Recommendations';
+import { useMobile } from '@/hooks/use-mobile';
+import { MobileSidebar } from '@/components/MobileSidebar';
+
+const fetchBooks = async (searchQuery: string, genre: string | null, status: string | null, language: string | null) => {
+  const params = new URLSearchParams();
+  if (searchQuery) params.append('search', searchQuery);
+  if (genre) params.append('genre', genre);
+  if (status) params.append('status', status);
+  if (language) params.append('language', language);
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/books?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error('Network response was not ok');
+  }
+  return response.json();
+};
 
 export default function Index() {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [loading, setLoading] = useState(true);
   const [selectedBook, setSelectedBook] = useState<Book | null>(null);
   const [searchParams] = useSearchParams();
   const [searchQuery, setSearchQuery] = useState('');
+  const isMobile = useMobile();
 
   const genre = searchParams.get('genre');
   const status = searchParams.get('status');
   const language = searchParams.get('language');
 
+  const { data: books = [], isLoading: loading } = useQuery<Book[]>({
+    queryKey: ['books', searchQuery, genre, status, language],
+    queryFn: () => fetchBooks(searchQuery, genre, status, language),
+  });
+
   const hasFilters = useMemo(() => genre || status || language || searchQuery, [genre, status, language, searchQuery]);
-
-  useEffect(() => {
-    const fetchBooks = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (searchQuery) params.append('search', searchQuery);
-        if (genre) params.append('genre', genre);
-        if (status) params.append('status', status);
-        if (language) params.append('language', language);
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/books?${params.toString()}`);
-        const data = await response.json();
-        setBooks(data);
-      } catch (error) {
-        console.error('Failed to fetch books:', error);
-      }
-      setLoading(false);
-    };
-
-    const debounce = setTimeout(() => {
-      fetchBooks();
-    }, 300);
-
-    return () => clearTimeout(debounce);
-  }, [searchQuery, genre, status, language]);
 
   const groupedBooks = useMemo(() => {
     if (genre) {
@@ -66,19 +61,22 @@ export default function Index() {
       <MainSidebar />
       <div className="flex-1 flex flex-col">
         <header className="flex items-center justify-between p-4 border-b">
-          <div className="w-full md:w-1/2">
-            <SearchBar onSearch={setSearchQuery} />
+          <div className="flex items-center gap-4">
+            <MobileSidebar />
+            <div className="w-full md:w-auto">
+              <SearchBar onSearch={setSearchQuery} />
+            </div>
           </div>
           <ThemeToggle />
         </header>
-        <main className="flex-1 p-8 overflow-y-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
           {loading ? (
             <LoadingSkeleton />
           ) : hasFilters ? (
             Object.keys(groupedBooks).length === 0 ? (
               <div className="text-center py-12">
-                <h2 className="text-2xl font-semibold">No books found</h2>
-                <p className="text-muted-foreground mt-2">Try adjusting your search or filters.</p>
+                <h2 className="text-2xl font-semibold">Buku Tidak Di Temukan</h2>
+                <p className="text-muted-foreground mt-2">Gunakan Kata Kunci Lain.</p>
               </div>
             ) : (
               <div className="space-y-12">

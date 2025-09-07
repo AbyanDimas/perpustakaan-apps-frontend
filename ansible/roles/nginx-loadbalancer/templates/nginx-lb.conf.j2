@@ -1,0 +1,24 @@
+# Konfigurasi Nginx sebagai Load Balancer
+
+# 1. Definisikan grup server web (upstream)
+upstream web_servers {
+    # Ambil daftar IP dari inventory dan loop untuk menambahkannya ke sini
+{% for host in groups['web_servers'] %}
+    server {{ hostvars[host]['ansible_host'] }};
+{% endfor %}
+}
+
+# 2. Konfigurasi server utama
+server {
+    listen 80;
+    server_name _;
+
+    location / {
+        # Teruskan semua request ke grup upstream web_servers
+        proxy_pass http://web_servers;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

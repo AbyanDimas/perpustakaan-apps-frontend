@@ -1,10 +1,39 @@
 ---
 # Tasks untuk mendeploy aplikasi frontend
 
-- name: Install Docker
-  ansible.builtin.yum:
-    name: docker
+- name: Update apt cache and install prerequisites
+  ansible.builtin.apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
     state: present
+    update_cache: yes
+
+- name: Add Docker GPG key
+  ansible.builtin.get_url:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    dest: /etc/apt/trusted.gpg.d/docker.asc
+    mode: '0644'
+    force: true
+
+- name: Add Docker repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch=amd64 signed-by=/etc/apt/trusted.gpg.d/docker.asc] https://download.docker.com/linux/ubuntu {{ ansible_lsb.codename }} stable"
+    state: present
+
+- name: Install Docker Engine
+  ansible.builtin.apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-buildx-plugin
+      - docker-compose-plugin
+    state: present
+    update_cache: yes
 
 - name: Start and enable Docker service
   ansible.builtin.service:
@@ -14,23 +43,45 @@
 
 - name: Add remote user to docker group
   ansible.builtin.user:
-    name: "{{ remote_user }}"
+    name: "{{ ansible_user }}"
     groups: docker
     append: yes
 
-- name: Copy project source to the server
-  ansible.builtin.copy:
-    src: ../../../../ # Salin seluruh direktori proyek
-    dest: /home/{{ remote_user }}/app
+- name: Install git
+  ansible.builtin.apt:
+    name: git
+    state: present
+
+- name: Clone repository from GitHub
+  ansible.builtin.git:
+    repo: 'https://github.com/AbyanDimas/bookish-curved-library'
+    dest: /home/{{ ansible_user }}/app
+    version: main
+    force: yes
 
 - name: Build frontend Docker image from Dockerfile
   community.docker.docker_image:
     name: books-library-frontend
     build:
-      path: /home/{{ remote_user }}/app
+      path: /home/{{ ansible_user }}/app
       dockerfile: Dockerfile
     source: build
     state: present
+
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: nginx
+    state: present
+
+- name: Configure Nginx as Reverse Proxy for Backend
+  ansible.builtin.template:
+    src: nginx-proxy.conf.j2
+    dest: /etc/nginx/sites-available/default
+
+- name: Restart Nginx
+  ansible.builtin.service:
+    name: nginx
+    state: restarted
 
 - name: Run frontend container
   community.docker.docker_container:
