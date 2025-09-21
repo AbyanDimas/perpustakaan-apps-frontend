@@ -38,7 +38,7 @@ export const ThemeToggle = () => {
       variant="outline"
       size="sm"
       onClick={toggleTheme}
-      className="rounded-xl h-10 w-10 p-0 border-border/50 hover:border-primary/50 transition-all duration-300"
+      className="rounded-lg h-10 w-10 p-0 border-border/50 hover:border-primary/50 transition-all duration-300 text-white bg-white hover:bg-white"
     >
       {isDark ? (
         <Sun className="h-4 w-4 text-accent transition-transform duration-300 rotate-0 scale-100" />
