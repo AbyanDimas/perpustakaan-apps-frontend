@@ -60,7 +60,7 @@ export function MainSidebar() {
         <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-lg flex items-center justify-center">
           <Library className="h-6 w-6 text-white" />
         </div>
-        <h1 className="text-xl font-bold tracking-tighter">Books Library</h1>
+        <h1 className="text-xl font-bold tracking-tighter">Open Library Apps</h1>
       </div>
       <nav className="flex-1 p-4 space-y-6 text-sm font-medium overflow-y-auto">
         <div>

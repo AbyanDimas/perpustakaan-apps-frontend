@@ -78,7 +78,7 @@ export default function AdminPage() {
     queryFn: fetchBooks 
   });
 
-  const { data: statsData, isLoading: isLoadingStats } = useQuery({ 
+  const { data: statsData, isLoading: isLoadingStats} = useQuery({ 
     queryKey: ['stats'], 
     queryFn: fetchStats 
   });
@@ -163,7 +163,7 @@ export default function AdminPage() {
           >
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Add Book
+              Tambahkan Buku
             </Button>
           </AddBookDialog>
           <ThemeToggle />
@@ -171,10 +171,10 @@ export default function AdminPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <DashboardCard title="Total Books" value={isLoadingStats ? '...' : statsData?.totalBooks.toString()} icon={BookOpen} />
-        <DashboardCard title="Available" value={isLoadingStats ? '...' : statsData?.availableBooks.toString()} icon={BookIcon} />
-        <DashboardCard title="Borrowed" value={isLoadingStats ? '...' : statsData?.borrowedBooks.toString()} icon={Users} />
-        <DashboardCard title="Visitors" value={isLoadingStats ? '...' : statsData?.totalVisitors.toString()} icon={Users} />
+        <DashboardCard title="Total Buku" value={isLoadingStats ? 'Loading...' : statsData?.totalBooks.toString()} icon={BookOpen} />
+        <DashboardCard title="Tersedia" value={isLoadingStats ? 'Loading...' : statsData?.availableBooks.toString()} icon={BookIcon} />
+        <DashboardCard title="Terjual" value={isLoadingStats ? 'Loading...' : statsData?.borrowedBooks.toString()} icon={Users} />
+        <DashboardCard title="Pengunjung" value={isLoadingStats ? 'Loading...'  : statsData?.totalVisitors.toString()} icon={Users} />
       </div>
 
       <div className="mt-8">
@@ -182,7 +182,7 @@ export default function AdminPage() {
           {isLoadingBooks ? (
             <p>Loading...</p>
           ) : isErrorBooks ? (
-            <p>Error fetching books.</p>
+            <div className="rounded-lg border flex items-center justify-center h-full mt-5 pb-10 pt-10 text-white bg-red-700"> Gagal Mendapatkan Informasi</div>
           ) : (
             <BookDataTable books={books} onDelete={handleDelete} onEdit={handleEdit} onPreview={handlePreview} />
           )}

@@ -1,9 +1,0 @@
----
-# Konfigurasi untuk ansible-mariadb-galera-cluster
-
-mariadb_galera_cluster_nodes:
-  - "{{ hostvars[groups['database_servers'][0]]['ansible_host'] }}"
-  - "{{ hostvars[groups['database_servers'][1]]['ansible_host'] }}"
-  - "{{ hostvars[groups['database_servers'][2]]['ansible_host'] }}"
-
-mariadb_galera_cluster_root_password: "{{ lookup('env', 'DB_ROOT_PASSWORD') }}"
