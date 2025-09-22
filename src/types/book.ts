@@ -3,8 +3,10 @@ export type BookStatus = 'TERSEDIA' | 'DIPINJAM';
 export interface Book {
   id: string;
   title: string;
+  author: string;
   description: string;
   pdfPath: string;
+  coverPath: string;
   genre: string;
   status: BookStatus;
   language: string;

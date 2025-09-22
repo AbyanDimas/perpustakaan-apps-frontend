@@ -40,7 +40,7 @@ export function BookCard({ book, onClick }: BookCardProps) {
       <Card className="overflow-hidden transition-all duration-300 ease-in-out border rounded-lg shadow-sm group-hover:shadow-xl group-hover:-translate-y-2">
         <CardContent className="p-0">
           <img
-            src={book.coverPath || './placeholder.svg'}
+            src={book.coverPath ? `${import.meta.env.VITE_API_URL}/${book.coverPath}` : './placeholder.svg'}
             alt={book.title}
             className="object-cover w-full h-auto rounded-t-lg aspect-[2/3]"
           />
