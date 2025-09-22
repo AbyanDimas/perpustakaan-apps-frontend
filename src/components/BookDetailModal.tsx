@@ -19,7 +19,7 @@ export function BookDetailModal({ book, open, onOpenChange }: BookDetailModalPro
         <div className="flex">
           <div className="w-1/3">
             <img 
-              src={book.coverPath ? `${import.meta.env.VITE_API_URL}/${book.coverPath}` : './placeholder.svg'} 
+              src={book.coverPath ? (book.coverPath.startsWith('http') ? book.coverPath : `${import.meta.env.VITE_API_URL}/${book.coverPath}`) : './placeholder.svg'} 
               alt={book.title} 
               className="object-cover h-full w-full rounded-l-lg"
             />
@@ -40,7 +40,7 @@ export function BookDetailModal({ book, open, onOpenChange }: BookDetailModalPro
             </div>
 
             <Button asChild className="mt-6 w-full">
-              <a href={book.pdfPath ? `${import.meta.env.VITE_API_URL}/${book.pdfPath}` : '#'} target="_blank" rel="noopener noreferrer" disabled={!book.pdfPath}>
+              <a href={book.pdfPath ? (book.pdfPath.startsWith('http') ? book.pdfPath : `${import.meta.env.VITE_API_URL}/${book.pdfPath}`) : '#'} target="_blank" rel="noopener noreferrer" disabled={!book.pdfPath}>
                 <ExternalLink className="mr-2 h-4 w-4" />
                 View PDF
               </a>
